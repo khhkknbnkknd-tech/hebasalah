@@ -584,23 +584,29 @@ function copySyncLink(url) {
 
 function initCloud() {
   const st = document.getElementById('cloudStatus');
+  if (typeof firebase === 'undefined') {
+    if (st) st.textContent = '⚠️ تعذر تحميل ملفات Firebase';
+    return;
+  }
   if (!firebaseConfig.apiKey.startsWith('PASTE')) {
     try {
-      firebase.initializeApp(firebaseConfig);
+      if (!firebase.apps || !firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
       cloudRef = firebase.database().ref('heba-salah');
       cloudReady = true;
-      st.textContent = '☁️ متصل بقاعدة بيانات Firebase';
+      if (st) st.textContent = '☁️ متصل بقاعدة بيانات Firebase';
       cloudRef.on('value', snap => {
         const d = snap.val();
         if (d && d.students) applyCloudData(d);
         else pushToCloud();
       }, err => {
         console.error('Firebase error:', err);
-        st.textContent = '⚠️ تحقق من قواعد Firebase (Rules)';
+        if (st) st.textContent = '⚠️ خطأ: ' + (err.message || 'تحقق من قواعد Rules');
       });
     } catch (e) { 
-      console.error(e);
-      st.textContent = '⚠️ تعذر الاتصال (يعمل محلياً)'; 
+      console.error('Firebase init error:', e);
+      if (st) st.textContent = '⚠️ تعذر الاتصال: ' + (e.message || ''); 
     }
     return;
   }

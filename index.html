@@ -530,13 +530,14 @@ let currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
 
 // ======= ربط السحابة والمزامنة =======
 const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY",
-  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://PASTE_YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId: "PASTE_YOUR_PROJECT",
-  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyCArkxhxiZEDJL_qwE0dLsSrM3235NUDEw",
+  authDomain: "heba-salah.firebaseapp.com",
+  databaseURL: "https://heba-salah-default-rtdb.firebaseio.com",
+  projectId: "heba-salah",
+  storageBucket: "heba-salah.firebasestorage.app",
+  messagingSenderId: "755491504502",
+  appId: "1:755491504502:web:46538bcc25735817abfa57",
+  measurementId: "G-NCQ2MBWDEZ"
 };
 
 let cloudReady = false, cloudRef = null, cloudPushTimer = null;
@@ -553,6 +554,7 @@ function dataBundle() {
 }
 
 function applyCloudData(d) {
+  if (d.updatedAt && d.updatedAt < localUpdatedAt) return;
   students = d.students || students;
   attendance = d.attendance || attendance;
   exams = d.exams || exams;
@@ -582,19 +584,29 @@ function copySyncLink(url) {
 
 function initCloud() {
   const st = document.getElementById('cloudStatus');
+  if (typeof firebase === 'undefined') {
+    if (st) st.textContent = '⚠️ تعذر تحميل ملفات Firebase';
+    return;
+  }
   if (!firebaseConfig.apiKey.startsWith('PASTE')) {
     try {
-      firebase.initializeApp(firebaseConfig);
+      if (!firebase.apps || !firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
       cloudRef = firebase.database().ref('heba-salah');
       cloudReady = true;
-      st.textContent = '☁️ متصل بقاعدة بيانات Firebase';
-      cloudRef.once('value', snap => {
+      if (st) st.textContent = '☁️ متصل بقاعدة بيانات Firebase';
+      cloudRef.on('value', snap => {
         const d = snap.val();
         if (d && d.students) applyCloudData(d);
         else pushToCloud();
+      }, err => {
+        console.error('Firebase error:', err);
+        if (st) st.textContent = '⚠️ خطأ: ' + (err.message || 'تحقق من قواعد Rules');
       });
     } catch (e) { 
-      st.textContent = '⚠️ تعذر الاتصال (يعمل محلياً)'; 
+      console.error('Firebase init error:', e);
+      if (st) st.textContent = '⚠️ تعذر الاتصال: ' + (e.message || ''); 
     }
     return;
   }
